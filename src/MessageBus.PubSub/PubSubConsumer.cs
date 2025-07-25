@@ -1,6 +1,7 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Grpc.Core;
 using MessageBus.PubSub.Configuration;
+using MessageBus.PubSub.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -20,9 +21,9 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         SubscriptionId subscriptionId,
         bool isDeadLetter,
         IServiceScopeFactory serviceScopeFactory,
-        IMessageSerializer messageSerializer,
+        IPubSubSerializer serializer,
         ILogger<MessageConsumer<TEvent, TConsumer>> logger)
-        : base(serviceScopeFactory, messageSerializer, logger)
+        : base(serviceScopeFactory, serializer, logger)
     {
         _channelCredentials = channelCredentials;
         _subscriptionId = subscriptionId;

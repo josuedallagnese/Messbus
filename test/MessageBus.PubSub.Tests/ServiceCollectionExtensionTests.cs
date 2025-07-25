@@ -23,12 +23,12 @@ public class ServiceCollectionExtensionTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var messageBus = serviceProvider.GetService<IMessageBus>();
-        var serializer = serviceProvider.GetService<IMessageSerializer>();
+        var serializer = serviceProvider.GetService<IPubSubSerializer>();
 
         Assert.NotNull(messageBus);
         Assert.IsType<PubSubMessageBus>(messageBus);
         Assert.NotNull(serializer);
-        Assert.IsType<JsonMessageSerializer>(serializer);
+        Assert.IsType<PubSubSerializer>(serializer);
     }
 
     [Fact]
@@ -48,14 +48,14 @@ public class ServiceCollectionExtensionTests
         var serviceProvider = services.BuildServiceProvider();
         var messageBus1 = serviceProvider.GetKeyedService<IMessageBus>("Account1");
         var messageBus2 = serviceProvider.GetKeyedService<IMessageBus>("Account2");
-        var serializer = serviceProvider.GetService<IMessageSerializer>();
+        var serializer = serviceProvider.GetService<IPubSubSerializer>();
 
         Assert.NotNull(messageBus1);
         Assert.NotNull(messageBus2);
         Assert.IsType<PubSubMessageBus>(messageBus1);
         Assert.IsType<PubSubMessageBus>(messageBus2);
         Assert.NotNull(serializer);
-        Assert.IsType<JsonMessageSerializer>(serializer);
+        Assert.IsType<PubSubSerializer>(serializer);
     }
 
     [Fact]
@@ -88,12 +88,12 @@ public class ServiceCollectionExtensionTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var messageBus = serviceProvider.GetService<IMessageBus>();
-        var serializer = serviceProvider.GetService<IMessageSerializer>();
+        var serializer = serviceProvider.GetService<IPubSubSerializer>();
 
         Assert.NotNull(messageBus);
         Assert.IsType<PubSubMessageBus>(messageBus);
         Assert.NotNull(serializer);
-        Assert.IsType<JsonMessageSerializer>(serializer);
+        Assert.IsType<PubSubSerializer>(serializer);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class ServiceCollectionExtensionTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        var serializer = serviceProvider.GetService<IMessageSerializer>();
+        var serializer = serviceProvider.GetService<IPubSubSerializer>();
 
         Assert.NotNull(serializer);
         Assert.IsType<CustomTestSerializer>(serializer);
@@ -284,7 +284,7 @@ public class ServiceCollectionExtensionTests
     }
 }
 
-public class CustomTestSerializer : IMessageSerializer
+public class CustomTestSerializer : IPubSubSerializer
 {
     public T Deserialize<T>(byte[] data) => default;
     public byte[] Serialize<T>(T obj) => Array.Empty<byte>();

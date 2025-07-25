@@ -1,6 +1,7 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Grpc.Core;
 using MessageBus.PubSub.Configuration;
+using MessageBus.PubSub.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +17,7 @@ public class PubSubMessageBus : MessageBus
     public PubSubMessageBus(
         PubSubConfiguration pubSubConfiguration,
         IServiceScopeFactory serviceScopeFactory,
-        IMessageSerializer serializer,
+        IPubSubSerializer serializer,
         ILogger<MessageBus> logger)
         : base(serviceScopeFactory, serializer, logger)
     {

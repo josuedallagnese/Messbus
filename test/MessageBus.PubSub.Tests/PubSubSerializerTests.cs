@@ -4,13 +4,13 @@ using MessageBus.PubSub.Serialization;
 
 namespace MessageBus.PubSub.Tests;
 
-public class JsonMessageSerializerTests
+public class PubSubSerializerTests
 {
     [Fact]
     public void SerializeAndDeserialize_ShouldReturnSameObject()
     {
         // Arrange
-        var serializer = new JsonMessageSerializer();
+        var serializer = new PubSubSerializer();
 
         var originalMessage = new { Id = 1, Name = "Test" };
 
@@ -28,7 +28,7 @@ public class JsonMessageSerializerTests
     public void SerializeAndDeserialize_ShouldReturnSameOriginalMessage()
     {
         // Arrange
-        var serializer = new JsonMessageSerializer();
+        var serializer = new PubSubSerializer();
         var originalMessage = new OriginalMessage { Id = 1, Name = "Test" };
 
         // Act

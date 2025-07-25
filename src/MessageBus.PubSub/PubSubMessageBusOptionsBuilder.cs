@@ -30,7 +30,7 @@ public class PubSubMessageBusOptionsBuilder
         else
             _services.TryAddKeyedSingleton<IMessageBus>(_pubSubConfiguration.Alias, (sp, _) => CreatePublisher(sp, _pubSubConfiguration));
 
-        _services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
+        _services.TryAddSingleton<IPubSubSerializer, PubSubSerializer>();;
     }
 
     internal PubSubMessageBusOptionsBuilder(IServiceCollection services, IConfiguration configuration, string alias) :
@@ -39,10 +39,10 @@ public class PubSubMessageBusOptionsBuilder
     }
 
     public PubSubMessageBusOptionsBuilder AddSerializer<TSerializer>()
-        where TSerializer : class, IMessageSerializer
+        where TSerializer : class, IPubSubSerializer
     {
-        _services.RemoveAll<IMessageSerializer>();
-        _services.TryAddSingleton<IMessageSerializer, TSerializer>();
+        _services.RemoveAll<IPubSubSerializer>();
+        _services.TryAddSingleton<IPubSubSerializer, TSerializer>();
 
         return this;
     }
@@ -87,7 +87,7 @@ public class PubSubMessageBusOptionsBuilder
             subcriptionId,
             isDeadLetter,
             sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<IMessageSerializer>(),
+            sp.GetRequiredService<IPubSubSerializer>(),
             sp.GetRequiredService<ILogger<PubSubConsumer<TEvent, TConsumer>>>());
     }
 
@@ -98,7 +98,7 @@ public class PubSubMessageBusOptionsBuilder
         return new PubSubMessageBus(
             pubSubConfiguration,
             sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<IMessageSerializer>(),
+            sp.GetRequiredService<IPubSubSerializer>(),
             sp.GetRequiredService<ILogger<PubSubMessageBus>>());
     }
 }
