@@ -41,15 +41,15 @@ public class PubSubConfiguration
 
     public ChannelCredentials GetChannelCredentials()
     {
+        if (EmulatorDetection == EmulatorDetection.EmulatorOnly)
+            return null;
+
         GoogleCredential credential;
 
         if (string.IsNullOrWhiteSpace(JsonCredentials))
             credential = GoogleCredential.GetApplicationDefault();
         else
             credential = GoogleCredential.FromJson(JsonCredentials);
-
-        if (EmulatorDetection == EmulatorDetection.EmulatorOnly)
-            return null;
 
         return credential.ToChannelCredentials();
     }

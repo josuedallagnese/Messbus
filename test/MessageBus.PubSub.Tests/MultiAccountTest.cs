@@ -13,7 +13,7 @@ public class MultiAccountTest : IClassFixture<MultiAccountFixture>
         _fixture = fixture;
     }
 
-    [Fact]
+    [PubSubFact]
     public async Task PublishAndConsume_WithoutFailures()
     {
         var publisherAccount1 = _fixture.GetPublisher("Account1");
@@ -38,7 +38,7 @@ public class MultiAccountTest : IClassFixture<MultiAccountFixture>
         Assert.Equal(1, collectorAccount2.AttemptCount);
     }
 
-    [Fact]
+    [PubSubFact]
     public async Task PublishAndConsume_WithRetries()
     {
         var publisherAccount1 = _fixture.GetPublisher("Account1");
@@ -67,7 +67,7 @@ public class MultiAccountTest : IClassFixture<MultiAccountFixture>
         Assert.Equal(4, collectorAccount2.AttemptCount);
     }
 
-    [Fact]
+    [PubSubFact]
     public async Task PublishAndConsume_WithRetriesAndDeadLettering()
     {
         var publisherAccount1 = _fixture.GetPublisher("Account1");

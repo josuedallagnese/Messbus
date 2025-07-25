@@ -13,7 +13,7 @@ public class SingleAccountTest : IClassFixture<SingleAccountFixture>
         _fixture = fixture;
     }
 
-    [Fact]
+    [PubSubFact]
     public async Task PublishAndConsume_WithoutFailures()
     {
         var publisher = _fixture.GetPublisher();
@@ -30,7 +30,7 @@ public class SingleAccountTest : IClassFixture<SingleAccountFixture>
         Assert.Equal(1, collector.AttemptCount);
     }
 
-    [Fact]
+    [PubSubFact]
     public async Task PublishAndConsume_WithRetries()
     {
         var publisher = _fixture.GetPublisher();
@@ -49,7 +49,7 @@ public class SingleAccountTest : IClassFixture<SingleAccountFixture>
         Assert.Equal(3, collector.AttemptCount);
     }
 
-    [Fact]
+    [PubSubFact]
     public async Task PublishAndConsume_WithRetriesAndDeadLettering()
     {
         var publisher = _fixture.GetPublisher();

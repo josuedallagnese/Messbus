@@ -8,7 +8,7 @@ namespace MessageBus.PubSub.Tests;
 
 public class ServiceCollectionExtensionTests
 {
-    [Fact]
+    [PubSubFact]
     public void AddPubSub_WithValidConfiguration_RegistersServices()
     {
         // Arrange
@@ -31,7 +31,7 @@ public class ServiceCollectionExtensionTests
         Assert.IsType<JsonMessageSerializer>(serializer);
     }
 
-    [Fact]
+    [PubSubFact]
     public void AddPubSub_WithAliasConfiguration_RegistersNamedServices()
     {
         // Arrange
@@ -58,7 +58,7 @@ public class ServiceCollectionExtensionTests
         Assert.IsType<JsonMessageSerializer>(serializer);
     }
 
-    [Fact]
+    [PubSubFact]
     public void AddPubSub_WithCustomConfiguration_RegistersServices()
     {
         // Arrange
@@ -96,7 +96,7 @@ public class ServiceCollectionExtensionTests
         Assert.IsType<JsonMessageSerializer>(serializer);
     }
 
-    [Fact]
+    [PubSubFact]
     public void AddPubSub_WithInvalidConfiguration_ThrowsException()
     {
         // Arrange
@@ -114,7 +114,7 @@ public class ServiceCollectionExtensionTests
         }));
     }
 
-    [Fact]
+    [PubSubFact]
     public void AddPubSub_WithCustomSerializer_RegistersCustomSerializer()
     {
         // Arrange
@@ -135,7 +135,7 @@ public class ServiceCollectionExtensionTests
         Assert.IsType<CustomTestSerializer>(serializer);
     }
 
-    [Fact]
+    [PubSubFact]
     public void AddPubSubConsumer_WithValidConfiguration_RegistersConsumer()
     {
         // Arrange
@@ -159,7 +159,7 @@ public class ServiceCollectionExtensionTests
         Assert.NotNull(hostedService);
     }
 
-    [Fact]
+    [PubSubFact]
     public void AddPubSubConsumer_WithDeadLetterQueue_RegistersBothConsumers()
     {
         // Arrange
@@ -203,7 +203,7 @@ public class ServiceCollectionExtensionTests
         Assert.Equal(2, hostedServices.Count());
     }
 
-    [Fact]
+    [PubSubFact]
     public void AddPubSubConsumer_WithMultipleConsumers_RegistersAllConsumers()
     {
         // Arrange
