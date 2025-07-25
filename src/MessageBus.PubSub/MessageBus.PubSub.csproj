@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Version>1.0.0</Version>
+        <IsPackable>true</IsPackable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Google.Cloud.PubSub.V1" Version="3.27.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MessageBus\MessageBus.csproj" />
+    </ItemGroup>
+
+</Project>
