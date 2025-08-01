@@ -24,11 +24,15 @@ public class PubSubMessageBus : MessageBus
         _pubSubConfiguration = pubSubConfiguration;
         _channelCredentials = pubSubConfiguration.GetChannelCredentials();
 
-        _publisherServiceApiClient = (new PublisherServiceApiClientBuilder()
-        {
-            ChannelCredentials = _channelCredentials,
-            EmulatorDetection = pubSubConfiguration.EmulatorDetection
-        }).Build();
+        var publisherBuilder = new PublisherServiceApiClientBuilder();
+
+        if (_pubSubConfiguration.UseEmulator)
+            publisherBuilder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
+        else
+            publisherBuilder.ChannelCredentials = _channelCredentials;
+
+
+        _publisherServiceApiClient = publisherBuilder.Build();
 
         _publishers = BuildPublishers();
     }
@@ -71,10 +75,13 @@ public class PubSubMessageBus : MessageBus
 
             var builder = new PublisherClientBuilder
             {
-                TopicName = topicId.TopicName,
-                ChannelCredentials = _channelCredentials,
-                EmulatorDetection = _pubSubConfiguration.EmulatorDetection
+                TopicName = topicId.TopicName
             };
+
+            if (_pubSubConfiguration.UseEmulator)
+                builder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
+            else
+                builder.ChannelCredentials = _channelCredentials;
 
             result[topic] = builder.Build();
         }

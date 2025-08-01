@@ -1,5 +1,4 @@
-﻿using Google.Api.Gax;
-using Google.Apis.Auth.OAuth2;
+﻿using Google.Apis.Auth.OAuth2;
 using Grpc.Auth;
 using Grpc.Core;
 using Microsoft.Extensions.Configuration;
@@ -11,8 +10,8 @@ public class PubSubConfiguration
     public string Alias { get; set; }
     public string ProjectId { get; set; }
     public string JsonCredentials { get; set; }
-    public EmulatorDetection EmulatorDetection { get; set; } = EmulatorDetection.EmulatorOrProduction;
     public ResourceInitialization ResourceInitialization { get; set; } = ResourceInitialization.All;
+    public bool UseEmulator { get; set; }
 
     public PublishingConfiguration Publishing { get; set; }
     public SubscriptionConfiguration Subscription { get; set; }
@@ -35,21 +34,21 @@ public class PubSubConfiguration
         JsonCredentials = configurationSection.GetValue<string>(nameof(JsonCredentials));
         Publishing = configurationSection.GetSection(nameof(Publishing)).Get<PublishingConfiguration>();
         Subscription = configurationSection.GetSection(nameof(Subscription)).Get<SubscriptionConfiguration>();
-        EmulatorDetection = configurationSection.GetValue<EmulatorDetection>(nameof(EmulatorDetection));
+        UseEmulator = configurationSection.GetValue<bool>(nameof(UseEmulator));
         ResourceInitialization = configurationSection.GetValue<ResourceInitialization>(nameof(ResourceInitialization));
     }
 
     public ChannelCredentials GetChannelCredentials()
     {
+        if (UseEmulator)
+            return null;
+
         GoogleCredential credential;
 
         if (string.IsNullOrWhiteSpace(JsonCredentials))
             credential = GoogleCredential.GetApplicationDefault();
         else
             credential = GoogleCredential.FromJson(JsonCredentials);
-
-        if (EmulatorDetection == EmulatorDetection.EmulatorOnly)
-            return null;
 
         return credential.ToChannelCredentials();
     }

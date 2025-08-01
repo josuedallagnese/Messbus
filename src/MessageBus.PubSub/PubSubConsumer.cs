@@ -35,17 +35,22 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         if (!_subscriptionId.PubSubConfiguration.ShouldInitializeSubscriptions())
             return;
 
-        var publisherService = await new PublisherServiceApiClientBuilder
-        {
-            ChannelCredentials = _channelCredentials,
-            EmulatorDetection = _subscriptionId.PubSubConfiguration.EmulatorDetection
-        }.BuildAsync(stoppingToken);
+        var publisherBuilder = new PublisherServiceApiClientBuilder();
+        var subscriberBuilder = new SubscriberServiceApiClientBuilder();
 
-        var subscriberService = await new SubscriberServiceApiClientBuilder
+        if (_subscriptionId.PubSubConfiguration.UseEmulator)
         {
-            ChannelCredentials = _channelCredentials,
-            EmulatorDetection = _subscriptionId.PubSubConfiguration.EmulatorDetection
-        }.BuildAsync(stoppingToken);
+            publisherBuilder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
+            subscriberBuilder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
+        }
+        else
+        {
+            publisherBuilder.ChannelCredentials = _channelCredentials;
+            subscriberBuilder.ChannelCredentials = _channelCredentials;
+        }
+
+        var publisherService = await publisherBuilder.BuildAsync(stoppingToken);
+        var subscriberService = await subscriberBuilder.BuildAsync(stoppingToken);
 
         await InitializeConsumerTopic(publisherService, stoppingToken);
 
@@ -58,12 +63,17 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
 
     protected override async Task StartProcessing(CancellationToken stoppingToken)
     {
-        _subscriberClient = await new SubscriberClientBuilder()
+        var subscriberBuilder = new SubscriberClientBuilder()
         {
-            ChannelCredentials = _channelCredentials,
-            SubscriptionName = _isDeadLetter ? _subscriptionId.DeadLetterSubscriptionName : _subscriptionId.SubscriptionName,
-            EmulatorDetection = _subscriptionId.PubSubConfiguration.EmulatorDetection
-        }.BuildAsync(stoppingToken);
+            SubscriptionName = _isDeadLetter ? _subscriptionId.DeadLetterSubscriptionName : _subscriptionId.SubscriptionName
+        };
+
+        if (_subscriptionId.PubSubConfiguration.UseEmulator)
+            subscriberBuilder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
+        else
+            subscriberBuilder.ChannelCredentials = _channelCredentials;
+
+        _subscriberClient = await subscriberBuilder.BuildAsync(stoppingToken);
 
         await _subscriberClient.StartAsync(ConsumerHandler);
     }
