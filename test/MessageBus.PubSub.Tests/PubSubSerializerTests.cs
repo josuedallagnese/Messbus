@@ -39,6 +39,57 @@ public class PubSubSerializerTests
         Assert.Equal(originalMessage.Id, deserializedMessage.Id);
         Assert.Equal(originalMessage.Name, deserializedMessage.Name);
     }
+
+    [Fact]
+    public void SerializeAndDeserialize_ShouldHandleSpecialTypes()
+    {
+        // Arrange
+        var serializer = new PubSubSerializer();
+        var now = DateTime.UtcNow;
+        var guid = Guid.NewGuid();
+
+        var specialMessage = new SpecialTypesMessage
+        {
+            Date = now,
+            Guid = guid,
+            DecimalValue = 123.45m,
+            BoolValue = true
+        };
+
+        // Act
+        var serializedData = serializer.Serialize(specialMessage);
+        var deserializedMessage = serializer.Deserialize<SpecialTypesMessage>(serializedData);
+
+        // Assert
+        Assert.Equal(specialMessage.Date, deserializedMessage.Date, TimeSpan.FromMilliseconds(1));
+        Assert.Equal(specialMessage.Guid, deserializedMessage.Guid);
+        Assert.Equal(specialMessage.DecimalValue, deserializedMessage.DecimalValue);
+        Assert.Equal(specialMessage.BoolValue, deserializedMessage.BoolValue);
+    }
+
+    [Fact]
+    public void SerializeAndDeserialize_ShouldHandleSpecialCharacters()
+    {
+        // Arrange
+        var serializer = new PubSubSerializer();
+        var specialText = "Olá, mundo! Çãõüß€ 漢字 😀";
+        var message = new SpecialCharactersMessage
+        {
+            Text = specialText
+        };
+
+        // Act
+        var serializedData = serializer.Serialize(message);
+        var deserializedMessage = serializer.Deserialize<SpecialCharactersMessage>(serializedData);
+
+        // Assert
+        Assert.Equal(specialText, deserializedMessage.Text);
+    }
+
+    public class SpecialCharactersMessage
+    {
+        public string Text { get; set; }
+    }
 }
 
 public class OriginalMessage
@@ -48,4 +99,12 @@ public class OriginalMessage
 
     [JsonPropertyName("Name")]
     public string Name { get; set; }
+}
+
+public class SpecialTypesMessage
+{
+    public DateTime Date { get; set; }
+    public Guid Guid { get; set; }
+    public decimal DecimalValue { get; set; }
+    public bool BoolValue { get; set; }
 }
