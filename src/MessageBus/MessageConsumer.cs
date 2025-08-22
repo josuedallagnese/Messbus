@@ -9,17 +9,20 @@ public abstract class MessageConsumer<TEvent, TConsumer> : BackgroundService
 {
     protected IServiceScopeFactory ServiceScopeFactory;
     protected IMessageSerializer Serializer;
-    protected ILogger<MessageConsumer<TEvent, TConsumer>> Logger;
+    protected ILogger Logger;
+    protected bool VerbosityMode;
     protected string ConsumerName;
 
     protected MessageConsumer(
         IServiceScopeFactory serviceScopeFactory,
         IMessageSerializer serializer,
-        ILogger<MessageConsumer<TEvent, TConsumer>> logger)
+        ILogger<MessageConsumer<TEvent, TConsumer>> logger,
+        bool verbosityMode)
     {
         ServiceScopeFactory = serviceScopeFactory;
         Serializer = serializer;
         Logger = logger;
+        VerbosityMode = verbosityMode;
 
         ConsumerName = typeof(TConsumer).Name;
     }
@@ -56,7 +59,8 @@ public abstract class MessageConsumer<TEvent, TConsumer> : BackgroundService
 
         context.SetMessage(message);
 
-        Logger.LogInformation("Deserialized message successfully. MessageId={Id}, Attempt={Attempt}, Consumer={Consumer}", context.Id, context.Attempt, ConsumerName);
+        if (VerbosityMode)
+            Logger.LogInformation("Deserialized message successfully. MessageId={Id}, Attempt={Attempt}, Consumer={Consumer}, Message={@Message}", context.Id, context.Attempt, ConsumerName, context.Message);
 
         using var scope = ServiceScopeFactory.CreateScope();
 

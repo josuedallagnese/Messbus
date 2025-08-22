@@ -12,6 +12,7 @@ public class PubSubConfiguration
     public string JsonCredentials { get; set; }
     public ResourceInitialization ResourceInitialization { get; set; } = ResourceInitialization.All;
     public bool UseEmulator { get; set; }
+    public bool VerbosityMode { get; set; } = false;
 
     public PublishingConfiguration Publishing { get; set; }
     public SubscriptionConfiguration Subscription { get; set; }
@@ -36,6 +37,7 @@ public class PubSubConfiguration
         Subscription = configurationSection.GetSection(nameof(Subscription)).Get<SubscriptionConfiguration>();
         UseEmulator = configurationSection.GetValue<bool>(nameof(UseEmulator));
         ResourceInitialization = configurationSection.GetValue<ResourceInitialization>(nameof(ResourceInitialization));
+        VerbosityMode = configurationSection.GetValue(nameof(VerbosityMode), false);
     }
 
     public ChannelCredentials GetChannelCredentials()
@@ -63,14 +65,14 @@ public class PubSubConfiguration
         return new TopicId(ProjectId, topicId, this);
     }
 
-    public SubscriptionId GetSubscriptionId(string topic)
+    public SubscriptionId GetSubscriptionId(string topic, string subscription)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topic, nameof(topic));
-        ArgumentNullException.ThrowIfNull(Subscription, nameof(Subscription));
+        ArgumentNullException.ThrowIfNull(subscription, nameof(subscription));
 
         var topicId = GetTopicId(topic);
 
-        return new SubscriptionId(ProjectId, topicId, this);
+        return new SubscriptionId(ProjectId, topicId, this, subscription);
     }
 
     public bool ShouldInitializeTopics()
@@ -97,8 +99,11 @@ public class PubSubConfiguration
 
         if (Publishing is not null)
         {
-            if (Publishing.MessageRetentionDurationDays < 7)
-                throw new ArgumentException($"{nameof(Publishing.MessageRetentionDurationDays)} must be provided if {nameof(Publishing)} is configured and must be greater or equal than 7 days.");
+            if (ResourceInitialization != ResourceInitialization.None)
+            {
+                if (Publishing.MessageRetentionDurationDays < 7)
+                    throw new ArgumentException($"{nameof(Publishing.MessageRetentionDurationDays)} must be provided if {nameof(Publishing)} is configured and must be greater or equal than 7 days.");
+            }
 
             if (Publishing.Topics is null || Publishing.Topics.Count == 0)
                 throw new ArgumentException($"{nameof(Publishing.Topics)} must be provided and non-empty if {nameof(Publishing)} is configured.");
@@ -109,8 +114,11 @@ public class PubSubConfiguration
             if (string.IsNullOrWhiteSpace(Subscription.Sufix))
                 throw new ArgumentException($"{nameof(Subscription.Sufix)} must be provided if {nameof(Subscription)} is configured.");
 
-            if (Publishing.MessageRetentionDurationDays < 7)
-                throw new ArgumentException($"{nameof(Publishing.MessageRetentionDurationDays)} must be provided if {nameof(Publishing)} is configured and must be greater or equal than 7 days.");
+            if (ResourceInitialization != ResourceInitialization.None)
+            {
+                if (Publishing.MessageRetentionDurationDays < 7)
+                    throw new ArgumentException($"{nameof(Publishing.MessageRetentionDurationDays)} must be provided if {nameof(Publishing)} is configured and must be greater or equal than 7 days.");
+            }
         }
     }
 }

@@ -30,7 +30,7 @@ public class PubSubMessageBusOptionsBuilder
         else
             _services.TryAddKeyedSingleton<IMessageBus>(_pubSubConfiguration.Alias, (sp, _) => CreatePublisher(sp, _pubSubConfiguration));
 
-        _services.TryAddSingleton<IPubSubSerializer, PubSubSerializer>();;
+        _services.TryAddSingleton<IPubSubSerializer, PubSubSerializer>(); ;
     }
 
     internal PubSubMessageBusOptionsBuilder(IServiceCollection services, IConfiguration configuration, string alias) :
@@ -55,6 +55,14 @@ public class PubSubMessageBusOptionsBuilder
         return this;
     }
 
+    public PubSubMessageBusOptionsBuilder AddConsumer<TEvent, TConsumer>(string topic, string subscription)
+       where TConsumer : class, IMessageConsumer<TEvent>
+    {
+        AddConsumer<TEvent, TConsumer>(topic, isDeadLetter: false, subscription);
+
+        return this;
+    }
+
     public PubSubMessageBusOptionsBuilder AddConsumer<TEvent, TConsumer, TDLConsumer>(string topic)
         where TConsumer : class, IMessageConsumer<TEvent>
         where TDLConsumer : class, IMessageConsumer<TEvent>
@@ -65,18 +73,19 @@ public class PubSubMessageBusOptionsBuilder
         return this;
     }
 
-    private void AddConsumer<TEvent, TConsumer>(string topic, bool isDeadLetter)
+    private void AddConsumer<TEvent, TConsumer>(string topic, bool isDeadLetter, string subscription = null)
         where TConsumer : class, IMessageConsumer<TEvent>
     {
         _services.TryAddScoped<TConsumer>();
 
-        var subcriptionId = _pubSubConfiguration.GetSubscriptionId(topic);
+        var subcriptionId = _pubSubConfiguration.GetSubscriptionId(topic, subscription);
 
-        _services.AddHostedService((sp) => CreateConsumer<TEvent, TConsumer>(sp, _channelCredentials, subcriptionId, isDeadLetter));
+        _services.AddHostedService((sp) => CreateConsumer<TEvent, TConsumer>(sp, _pubSubConfiguration, _channelCredentials, subcriptionId, isDeadLetter));
     }
 
     private static PubSubConsumer<TEvent, TConsumer> CreateConsumer<TEvent, TConsumer>(
         IServiceProvider sp,
+        PubSubConfiguration pubSubConfiguration,
         ChannelCredentials credential,
         SubscriptionId subcriptionId,
         bool isDeadLetter)
@@ -88,7 +97,8 @@ public class PubSubMessageBusOptionsBuilder
             isDeadLetter,
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<IPubSubSerializer>(),
-            sp.GetRequiredService<ILogger<PubSubConsumer<TEvent, TConsumer>>>());
+            sp.GetRequiredService<ILogger<PubSubConsumer<TEvent, TConsumer>>>(),
+            pubSubConfiguration.VerbosityMode);
     }
 
     private static PubSubMessageBus CreatePublisher(
@@ -99,6 +109,7 @@ public class PubSubMessageBusOptionsBuilder
             pubSubConfiguration,
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<IPubSubSerializer>(),
-            sp.GetRequiredService<ILogger<PubSubMessageBus>>());
+            sp.GetRequiredService<ILogger<PubSubMessageBus>>(),
+            pubSubConfiguration.VerbosityMode);
     }
 }

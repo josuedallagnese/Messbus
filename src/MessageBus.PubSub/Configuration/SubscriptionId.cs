@@ -6,12 +6,13 @@ namespace MessageBus.PubSub.Configuration;
 public class SubscriptionId(
     string projectId,
     TopicId topicId,
-    PubSubConfiguration pubSubConfiguration)
+    PubSubConfiguration pubSubConfiguration,
+    string subscriptionName)
 {
     public PubSubConfiguration PubSubConfiguration { get; } = pubSubConfiguration;
 
     public SubscriptionName SubscriptionName =>
-        new(projectId, $"{topicId}.{PubSubConfiguration.Subscription.Sufix}");
+            new(projectId, string.IsNullOrWhiteSpace(subscriptionName) ? $"{topicId}.{PubSubConfiguration.Subscription.Sufix}" : subscriptionName);
 
     public TopicId TopicId => topicId;
 

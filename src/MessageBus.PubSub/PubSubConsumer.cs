@@ -22,8 +22,9 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         bool isDeadLetter,
         IServiceScopeFactory serviceScopeFactory,
         IPubSubSerializer serializer,
-        ILogger<MessageConsumer<TEvent, TConsumer>> logger)
-        : base(serviceScopeFactory, serializer, logger)
+        ILogger<MessageConsumer<TEvent, TConsumer>> logger,
+        bool verbosityMode)
+        : base(serviceScopeFactory, serializer, logger, verbosityMode)
     {
         _channelCredentials = channelCredentials;
         _subscriptionId = subscriptionId;

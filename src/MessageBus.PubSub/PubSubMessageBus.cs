@@ -18,8 +18,9 @@ public class PubSubMessageBus : MessageBus
         PubSubConfiguration pubSubConfiguration,
         IServiceScopeFactory serviceScopeFactory,
         IPubSubSerializer serializer,
-        ILogger<MessageBus> logger)
-        : base(serviceScopeFactory, serializer, logger)
+        ILogger<MessageBus> logger,
+        bool verbosityMode)
+        : base(serviceScopeFactory, serializer, logger, verbosityMode)
     {
         _pubSubConfiguration = pubSubConfiguration;
         _channelCredentials = pubSubConfiguration.GetChannelCredentials();
