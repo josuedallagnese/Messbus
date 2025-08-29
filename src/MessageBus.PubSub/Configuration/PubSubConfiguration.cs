@@ -1,4 +1,5 @@
 ﻿using Google.Apis.Auth.OAuth2;
+using Google.Cloud.ResourceManager.V3;
 using Grpc.Auth;
 using Grpc.Core;
 using Microsoft.Extensions.Configuration;
@@ -40,7 +41,7 @@ public class PubSubConfiguration
         VerbosityMode = configurationSection.GetValue(nameof(VerbosityMode), false);
     }
 
-    public ChannelCredentials GetChannelCredentials()
+    public GoogleCredential GetGoogleCredential()
     {
         if (UseEmulator)
             return null;
@@ -52,7 +53,30 @@ public class PubSubConfiguration
         else
             credential = GoogleCredential.FromJson(JsonCredentials);
 
+        return credential;
+    }
+
+    public ChannelCredentials GetChannelCredentials()
+    {
+        var credential = GetGoogleCredential();
+
         return credential.ToChannelCredentials();
+    }
+
+    public async Task<string> GetProjectNumber()
+    {
+        var client = await ProjectsClient.CreateAsync();
+
+        var response = client.SearchProjects(new SearchProjectsRequest
+        {
+            Query = $"id:{ProjectId}"
+        });
+
+        var project = response.FirstOrDefault();
+        if (project == null)
+            throw new ArgumentException($"Project with id '{ProjectId}' not found.");
+
+        return project.ProjectName.ProjectId;
     }
 
     public TopicId GetTopicId(string topicId)
@@ -68,7 +92,6 @@ public class PubSubConfiguration
     public SubscriptionId GetSubscriptionId(string topic, string subscription)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topic, nameof(topic));
-        ArgumentNullException.ThrowIfNull(subscription, nameof(subscription));
 
         var topicId = GetTopicId(topic);
 

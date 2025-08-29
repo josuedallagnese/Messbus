@@ -1,4 +1,5 @@
-﻿using Google.Cloud.PubSub.V1;
+﻿using Google.Cloud.Iam.V1;
+using Google.Cloud.PubSub.V1;
 using Grpc.Core;
 using MessageBus.PubSub.Configuration;
 using MessageBus.PubSub.Serialization;
@@ -60,6 +61,12 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         await InitializeConsumerDeadLetterSubscription(subscriberService, stoppingToken);
 
         await InitializeConsumerSubscription(subscriberService, stoppingToken);
+
+        if (_isDeadLetter)
+            return;
+
+        await EnsurePublisherRoleIamBindingToDeadLetterTopic(publisherService, stoppingToken);
+        await EnsureSubscriberRoleIamBindingToSubscription(subscriberService, stoppingToken);
     }
 
     protected override async Task StartProcessing(CancellationToken stoppingToken)
@@ -204,5 +211,77 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
                 _subscriptionId.SubscriptionName.SubscriptionId,
                 _subscriptionId.SubscriptionName.ProjectId);
         }
+    }
+
+    private async Task EnsurePublisherRoleIamBindingToDeadLetterTopic(PublisherServiceApiClient publisherService, CancellationToken stoppingToken)
+    {
+        var topic = _subscriptionId.GetDeadLetterTopic();
+        var resource = topic.Name;
+
+        try
+        {
+            var projectNumber = await _subscriptionId.PubSubConfiguration.GetProjectNumber();
+            var member = $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+
+            var policy = await publisherService.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest { Resource = resource }, stoppingToken);
+
+            if (AppendRole(policy, "roles/pubsub.publisher", member))
+            {
+                await publisherService.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest { Resource = resource, Policy = policy }, stoppingToken);
+
+                Logger.LogInformation("Message=Granted roles/pubsub.publisher on DLQ topic; Resource={Resource}; Member={Member}", resource, member);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Message=Failed to grant roles/pubsub.publisher on DLQ topic; Resource={Resource};", resource);
+            throw;
+        }
+    }
+
+    private async Task EnsureSubscriberRoleIamBindingToSubscription(SubscriberServiceApiClient subscriberService, CancellationToken stoppingToken)
+    {
+        var resource = _subscriptionId.SubscriptionName.ToString();
+
+        try
+        {
+            var projectNumber = await _subscriptionId.PubSubConfiguration.GetProjectNumber();
+            var member = $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+
+            var policy = await subscriberService.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest { Resource = resource }, stoppingToken);
+
+            if (AppendRole(policy, "roles/pubsub.subscriber", member))
+            {
+                await subscriberService.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest { Resource = resource, Policy = policy }, stoppingToken);
+
+                Logger.LogInformation("Message=Granted roles/pubsub.subscriber on subscription; Resource={Resource}; Member={Member}", resource, member);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Message=Failed to granted roles/pubsub.subscriber on subscription; Resource={Resource};", resource);
+        }
+    }
+
+    private static bool AppendRole(Policy policy, string role, string member)
+    {
+        var binding = policy.Bindings.FirstOrDefault(b => b.Role == role);
+        if (binding is null)
+        {
+            binding = new Binding
+            {
+                Role = role
+            };
+
+            policy.Bindings.Add(binding);
+        }
+
+        if (!binding.Members.Contains(member))
+        {
+            binding.Members.Add(member);
+            return true;
+        }
+
+        return false;
     }
 }
