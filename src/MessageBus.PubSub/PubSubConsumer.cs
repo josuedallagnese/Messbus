@@ -62,11 +62,11 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
 
         await InitializeConsumerSubscription(subscriberService, stoppingToken);
 
-        if (!_isDeadLetter)
-        {
-            await EnsurePublisherRoleBinding(publisherService, stoppingToken);
-            await EnsureSubscriberRoleBinding(subscriberService, stoppingToken);
-        }
+        if (_isDeadLetter || _subscriptionId.PubSubConfiguration.UseEmulator)
+            return;
+
+        await EnsurePublisherRoleBinding(publisherService, stoppingToken);
+        await EnsureSubscriberRoleBinding(subscriberService, stoppingToken);
     }
 
     protected override async Task StartProcessing(CancellationToken stoppingToken)
