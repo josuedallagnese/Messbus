@@ -8,6 +8,8 @@ namespace MessageBus.PubSub.Configuration;
 
 public class PubSubConfiguration
 {
+    private Project _project;
+
     public string Alias { get; set; }
     public string ProjectId { get; set; }
     public string JsonCredentials { get; set; }
@@ -41,21 +43,6 @@ public class PubSubConfiguration
         VerbosityMode = configurationSection.GetValue(nameof(VerbosityMode), false);
     }
 
-    public GoogleCredential GetGoogleCredential()
-    {
-        if (UseEmulator)
-            return null;
-
-        GoogleCredential credential;
-
-        if (string.IsNullOrWhiteSpace(JsonCredentials))
-            credential = GoogleCredential.GetApplicationDefault();
-        else
-            credential = GoogleCredential.FromJson(JsonCredentials);
-
-        return credential;
-    }
-
     public ChannelCredentials GetChannelCredentials()
     {
         var credential = GetGoogleCredential();
@@ -65,16 +52,7 @@ public class PubSubConfiguration
 
     public async Task<string> GetProjectNumber()
     {
-        var client = await ProjectsClient.CreateAsync();
-
-        var response = client.SearchProjects(new SearchProjectsRequest
-        {
-            Query = $"id:{ProjectId}"
-        });
-
-        var project = response.FirstOrDefault();
-        if (project == null)
-            throw new ArgumentException($"Project with id '{ProjectId}' not found.");
+        var project = await GetProject();
 
         return project.ProjectName.ProjectId;
     }
@@ -143,5 +121,39 @@ public class PubSubConfiguration
                     throw new ArgumentException($"{nameof(Publishing.MessageRetentionDurationDays)} must be provided if {nameof(Publishing)} is configured and must be greater or equal than 7 days.");
             }
         }
+    }
+
+
+    private GoogleCredential GetGoogleCredential()
+    {
+        if (UseEmulator)
+            return null;
+
+        GoogleCredential credential;
+
+        if (string.IsNullOrWhiteSpace(JsonCredentials))
+            credential = GoogleCredential.GetApplicationDefault();
+        else
+            credential = GoogleCredential.FromJson(JsonCredentials);
+
+        return credential;
+    }
+
+    private async Task<Project> GetProject()
+    {
+        if (_project != null) return _project;
+
+        var client = await ProjectsClient.CreateAsync();
+
+        var response = client.SearchProjects(new SearchProjectsRequest
+        {
+            Query = $"id:{ProjectId}"
+        });
+
+        var project = response.FirstOrDefault();
+
+        _project = project ?? throw new ArgumentException($"Project with id '{ProjectId}' not found.");
+
+        return _project;
     }
 }

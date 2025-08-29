@@ -62,11 +62,11 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
 
         await InitializeConsumerSubscription(subscriberService, stoppingToken);
 
-        if (_isDeadLetter)
-            return;
-
-        await EnsurePublisherRoleIamBindingToDeadLetterTopic(publisherService, stoppingToken);
-        await EnsureSubscriberRoleIamBindingToSubscription(subscriberService, stoppingToken);
+        if (!_isDeadLetter)
+        {
+            await EnsurePublisherRoleBinding(publisherService, stoppingToken);
+            await EnsureSubscriberRoleBinding(subscriberService, stoppingToken);
+        }
     }
 
     protected override async Task StartProcessing(CancellationToken stoppingToken)
@@ -213,23 +213,22 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         }
     }
 
-    private async Task EnsurePublisherRoleIamBindingToDeadLetterTopic(PublisherServiceApiClient publisherService, CancellationToken stoppingToken)
+    private async Task EnsurePublisherRoleBinding(PublisherServiceApiClient publisherService, CancellationToken stoppingToken)
     {
         var topic = _subscriptionId.GetDeadLetterTopic();
         var resource = topic.Name;
 
         try
         {
-            var projectNumber = await _subscriptionId.PubSubConfiguration.GetProjectNumber();
-            var member = $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+            var serviceAccount = await _subscriptionId.GetServiceAccount();
 
             var policy = await publisherService.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest { Resource = resource }, stoppingToken);
 
-            if (AppendRole(policy, "roles/pubsub.publisher", member))
+            if (AppendRole(policy, "roles/pubsub.publisher", serviceAccount))
             {
                 await publisherService.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest { Resource = resource, Policy = policy }, stoppingToken);
 
-                Logger.LogInformation("Message=Granted roles/pubsub.publisher on DLQ topic; Resource={Resource}; Member={Member}", resource, member);
+                Logger.LogInformation("Message=Granted roles/pubsub.publisher on DLQ topic; Resource={Resource}; ServiceAccount={serviceAccount}", resource, serviceAccount);
             }
         }
         catch (Exception ex)
@@ -239,22 +238,21 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         }
     }
 
-    private async Task EnsureSubscriberRoleIamBindingToSubscription(SubscriberServiceApiClient subscriberService, CancellationToken stoppingToken)
+    private async Task EnsureSubscriberRoleBinding(SubscriberServiceApiClient subscriberService, CancellationToken stoppingToken)
     {
         var resource = _subscriptionId.SubscriptionName.ToString();
 
         try
         {
-            var projectNumber = await _subscriptionId.PubSubConfiguration.GetProjectNumber();
-            var member = $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+            var serviceAccount = await _subscriptionId.GetServiceAccount();
 
             var policy = await subscriberService.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest { Resource = resource }, stoppingToken);
 
-            if (AppendRole(policy, "roles/pubsub.subscriber", member))
+            if (AppendRole(policy, "roles/pubsub.subscriber", serviceAccount))
             {
                 await subscriberService.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest { Resource = resource, Policy = policy }, stoppingToken);
 
-                Logger.LogInformation("Message=Granted roles/pubsub.subscriber on subscription; Resource={Resource}; Member={Member}", resource, member);
+                Logger.LogInformation("Message=Granted roles/pubsub.subscriber on subscription; Resource={Resource}; ServiceAccount={serviceAccount}", resource, serviceAccount);
             }
         }
         catch (Exception ex)

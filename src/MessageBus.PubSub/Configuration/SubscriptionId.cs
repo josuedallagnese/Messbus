@@ -64,5 +64,12 @@ public class SubscriptionId(
         }
     };
 
+    public async Task<string> GetServiceAccount()
+    {
+        var projectNumber = await PubSubConfiguration.GetProjectNumber();
+
+        return $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
+    }
+
     public override string ToString() => SubscriptionName.ToString();
 }
