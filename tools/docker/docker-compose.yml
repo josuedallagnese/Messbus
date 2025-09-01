@@ -1,0 +1,30 @@
+version: '3.9'
+
+networks:
+  messagebus_network:
+    name: messagebus_network
+
+services:
+  gcp-emulators:
+    build:
+      context: ./gcp-emulators
+      dockerfile: ./Dockerfile
+    image: asa/gcp-emulators
+    container_name: gcp-emulators
+    networks:
+      - messagebus_network
+    volumes:
+      - ./gcp-emulators/firebase.json:/app/firebase.json
+      - ./gcp-emulators/entrypoint.sh:/app/entrypoint.sh
+    ports:
+      - "4000:4000"   # UI
+      - "8080:8080"   # Firestore REST
+      - "5005:5005"   # Firestore WebSocket
+      - "8085:8085"   # Pub/Sub
+    environment:
+      PROJECT_ID: "account1"
+      FIRESTORE_PORT: 8080
+      FIRESTORE_WS_PORT: 5005
+      UI_PORT: 4000
+      PUBSUB_PORT: 8085
+    command: sh /app/entrypoint.sh

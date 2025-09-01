@@ -1,0 +1,20 @@
+{
+    "project": "%PROJECT_ID%",
+    "emulators": {
+        "firestore": {
+            "host": "0.0.0.0",
+            "port": "%FIRESTORE_PORT_PLACEHOLDER%",
+            "websocketPort": "%FIRESTORE_WSPORT_PLACEHOLDER%",
+            "rules": "firestore.rules"
+        },
+        "pubsub": {
+            "host": "0.0.0.0",
+            "port": "%PUBSUB_PORT%"
+        },
+        "ui": {
+            "enabled": true,
+            "host": "0.0.0.0",
+            "port": "%UI_PORT_PLACEHOLDER%"
+        }
+    }
+}
