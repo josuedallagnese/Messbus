@@ -7,21 +7,20 @@ namespace MessageBus;
 public abstract class MessageConsumer<TEvent, TConsumer> : BackgroundService
     where TConsumer : IMessageConsumer<TEvent>
 {
-    protected IServiceScopeFactory ServiceScopeFactory;
+    protected IServiceProvider ServiceProvider;
     protected IMessageSerializer Serializer;
     protected ILogger Logger;
     protected bool VerbosityMode;
     protected string ConsumerName;
 
     protected MessageConsumer(
-        IServiceScopeFactory serviceScopeFactory,
+        IServiceProvider serviceProvider,
         IMessageSerializer serializer,
-        ILogger<MessageConsumer<TEvent, TConsumer>> logger,
         bool verbosityMode)
     {
-        ServiceScopeFactory = serviceScopeFactory;
+        ServiceProvider = serviceProvider;
         Serializer = serializer;
-        Logger = logger;
+        Logger = serviceProvider.GetService<ILogger<MessageConsumer<TEvent, TConsumer>>>();
         VerbosityMode = verbosityMode;
 
         ConsumerName = typeof(TConsumer).Name;
@@ -55,14 +54,14 @@ public abstract class MessageConsumer<TEvent, TConsumer> : BackgroundService
 
     protected virtual async Task ProcessMessage(MessageContext<TEvent> context, CancellationToken cancellationToken)
     {
-        var message = Serializer.Deserialize<TEvent>(context.Data);
+        var data = Serializer.Deserialize<TEvent>(context.Data);
 
-        context.SetMessage(message);
+        context.SetMessage(data);
 
         if (VerbosityMode)
             Logger.LogInformation("Deserialized message successfully. MessageId={Id}, Attempt={Attempt}, Consumer={Consumer}, Message={@Message}", context.Id, context.Attempt, ConsumerName, context.Message);
 
-        using var scope = ServiceScopeFactory.CreateScope();
+        using var scope = ServiceProvider.CreateScope();
 
         var consumer = scope.ServiceProvider.GetRequiredService<TConsumer>();
 

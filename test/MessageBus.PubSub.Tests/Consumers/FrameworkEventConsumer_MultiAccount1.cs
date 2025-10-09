@@ -15,6 +15,6 @@ public class FrameworkEventConsumer_MultiAccount1 : IMessageConsumer<FrameworkEv
     {
         _consumerCollector.AddAttempt();
 
-        await _consumerCollector.Successful();
+        await _consumerCollector.Successful(context.Message);
     }
 }

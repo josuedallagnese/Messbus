@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace MessageBus.PubSub.Serialization;
 
-public class PubSubSerializer : IPubSubSerializer
+public class JsonMessageSerializer : IMessageSerializer
 {
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web)
     {

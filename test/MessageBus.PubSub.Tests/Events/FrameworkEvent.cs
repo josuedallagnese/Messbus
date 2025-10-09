@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Security.Cryptography;
+using System.Text.Json.Serialization;
 using Bogus;
 
 namespace MessageBus.PubSub.Tests.Events;

@@ -10,7 +10,7 @@ using Moq;
 
 namespace MessageBus.PubSub.Tests.Fixtures;
 
-public class SingleAccountFixture : AccountFixture
+public class EmulatorAccountFixture : AccountFixture
 {
     public IServiceProvider Provider { get; private set; }
     public EnvironmentId EnvironmentId { get; private set; }
@@ -29,7 +29,7 @@ public class SingleAccountFixture : AccountFixture
         });
 
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.SingleAccount.json", false)
+            .AddJsonFile("appsettings.Emulator.json", false)
             .Build();
 
         var pubSubConfiguration = new PubSubConfiguration(configuration);
@@ -40,7 +40,7 @@ public class SingleAccountFixture : AccountFixture
         services.AddSingleton<ConsumerCollector<FrameworkEvent, FrameworkEventConsumer_SingleAccount>>();
 
         Provider = services.BuildServiceProvider();
-        Logger = Provider.GetRequiredService<ILogger<SingleAccountFixture>>();
+        Logger = Provider.GetRequiredService<ILogger<EmulatorAccountFixture>>();
 
         EnvironmentId = pubSubConfiguration.GetEnvironmentId("framework");
         SubscriptionId = pubSubConfiguration.GetSubscriptionId("framework");

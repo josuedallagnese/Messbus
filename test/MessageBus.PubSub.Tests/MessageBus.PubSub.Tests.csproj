@@ -34,6 +34,15 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Update="appsettings.Emulator.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="appsettings.LoadTest.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="appsettings.UnmanagedAccount.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Update="appsettings.SingleAccount.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

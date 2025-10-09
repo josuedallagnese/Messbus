@@ -19,7 +19,16 @@ public static class ServiceCollectionExtension
         Action<PubSubConfiguration> configuration)
     {
         var pubSubConfiguration = new PubSubConfiguration();
+
         configuration?.Invoke(pubSubConfiguration);
+
+        return AddPubSub(services, pubSubConfiguration);
+    }
+
+    public static PubSubMessageBusOptionsBuilder AddPubSub(
+        this IServiceCollection services,
+        PubSubConfiguration pubSubConfiguration)
+    {
         return new PubSubMessageBusOptionsBuilder(services, pubSubConfiguration);
     }
 }

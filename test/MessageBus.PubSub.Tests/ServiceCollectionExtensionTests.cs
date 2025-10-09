@@ -3,6 +3,7 @@ using MessageBus.PubSub.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Moq;
 
 namespace MessageBus.PubSub.Tests;
 
@@ -23,12 +24,12 @@ public class ServiceCollectionExtensionTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var messageBus = serviceProvider.GetService<IMessageBus>();
-        var serializer = serviceProvider.GetService<IPubSubSerializer>();
+        var serializer = serviceProvider.GetService<IMessageSerializer>();
 
         Assert.NotNull(messageBus);
         Assert.IsType<PubSubMessageBus>(messageBus);
         Assert.NotNull(serializer);
-        Assert.IsType<PubSubSerializer>(serializer);
+        Assert.IsType<JsonMessageSerializer>(serializer);
     }
 
     [Fact]
@@ -48,14 +49,14 @@ public class ServiceCollectionExtensionTests
         var serviceProvider = services.BuildServiceProvider();
         var messageBus1 = serviceProvider.GetKeyedService<IMessageBus>("Account1");
         var messageBus2 = serviceProvider.GetKeyedService<IMessageBus>("Account2");
-        var serializer = serviceProvider.GetService<IPubSubSerializer>();
+        var serializer = serviceProvider.GetService<IMessageSerializer>();
 
         Assert.NotNull(messageBus1);
         Assert.NotNull(messageBus2);
         Assert.IsType<PubSubMessageBus>(messageBus1);
         Assert.IsType<PubSubMessageBus>(messageBus2);
         Assert.NotNull(serializer);
-        Assert.IsType<PubSubSerializer>(serializer);
+        Assert.IsType<JsonMessageSerializer>(serializer);
     }
 
     [Fact]
@@ -88,12 +89,12 @@ public class ServiceCollectionExtensionTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var messageBus = serviceProvider.GetService<IMessageBus>();
-        var serializer = serviceProvider.GetService<IPubSubSerializer>();
+        var serializer = serviceProvider.GetService<IMessageSerializer>();
 
         Assert.NotNull(messageBus);
         Assert.IsType<PubSubMessageBus>(messageBus);
         Assert.NotNull(serializer);
-        Assert.IsType<PubSubSerializer>(serializer);
+        Assert.IsType<JsonMessageSerializer>(serializer);
     }
 
     [Fact]
@@ -129,7 +130,7 @@ public class ServiceCollectionExtensionTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        var serializer = serviceProvider.GetService<IPubSubSerializer>();
+        var serializer = serviceProvider.GetService<IMessageSerializer>();
 
         Assert.NotNull(serializer);
         Assert.IsType<CustomTestSerializer>(serializer);
@@ -139,7 +140,9 @@ public class ServiceCollectionExtensionTests
     public void AddPubSubConsumer_WithValidConfiguration_RegistersConsumer()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection()
+            .AddSingleton(new Mock<IHostApplicationLifetime>().Object);
+
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.SingleAccount.json")
             .Build();
@@ -163,7 +166,8 @@ public class ServiceCollectionExtensionTests
     public void AddPubSubConsumer_WithDeadLetterQueue_RegistersBothConsumers()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection()
+            .AddSingleton(new Mock<IHostApplicationLifetime>().Object);
 
         // Act
         var builder = services.AddPubSub(config =>
@@ -181,7 +185,7 @@ public class ServiceCollectionExtensionTests
                 MessageRetentionDurationDays = 7,
                 AckDeadlineSeconds = 30,
                 MaxDeliveryAttempts = 5,
-                MinBackoffSeconds = 5,
+                MinBackoffSeconds = 10,
                 MaxBackoffSeconds = 600
             };
         });
@@ -207,7 +211,8 @@ public class ServiceCollectionExtensionTests
     public void AddPubSubConsumer_WithMultipleConsumers_RegistersAllConsumers()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection()
+            .AddSingleton(new Mock<IHostApplicationLifetime>().Object);
 
         // Act
         var builder = services.AddPubSub(config =>
@@ -225,7 +230,7 @@ public class ServiceCollectionExtensionTests
                 MessageRetentionDurationDays = 7,
                 AckDeadlineSeconds = 30,
                 MaxDeliveryAttempts = 5,
-                MinBackoffSeconds = 5,
+                MinBackoffSeconds = 10,
                 MaxBackoffSeconds = 600
             };
         });
@@ -284,8 +289,9 @@ public class ServiceCollectionExtensionTests
     }
 }
 
-public class CustomTestSerializer : IPubSubSerializer
+public class CustomTestSerializer : IMessageSerializer
 {
     public T Deserialize<T>(byte[] data) => default;
-    public byte[] Serialize<T>(T obj) => Array.Empty<byte>();
+
+    public byte[] Serialize<T>(T message) => Array.Empty<byte>();
 }

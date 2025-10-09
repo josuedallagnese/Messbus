@@ -1,14 +1,17 @@
-﻿using Google.Apis.Auth.OAuth2;
-using Google.Cloud.ResourceManager.V3;
+﻿using System.Collections.Concurrent;
+using Google.Apis.Auth.OAuth2;
 using Grpc.Auth;
 using Grpc.Core;
+using MessageBus.PubSub.Internal;
 using Microsoft.Extensions.Configuration;
 
 namespace MessageBus.PubSub.Configuration;
 
 public class PubSubConfiguration
 {
-    private Project _project;
+    private readonly ConcurrentDictionary<string, TopicId> _topicCache = new();
+    private readonly ConcurrentDictionary<string, SubscriptionId> _subscriptionCache = new();
+    private readonly ConcurrentDictionary<string, EnvironmentId> _environmentCache = new();
 
     public string Alias { get; set; }
     public string ProjectId { get; set; }
@@ -21,6 +24,11 @@ public class PubSubConfiguration
     public SubscriptionConfiguration Subscription { get; set; }
 
     public PubSubConfiguration()
+    {
+    }
+
+    public PubSubConfiguration(IConfiguration configuration)
+        : this(null, configuration)
     {
     }
 
@@ -39,44 +47,72 @@ public class PubSubConfiguration
         Publishing = configurationSection.GetSection(nameof(Publishing)).Get<PublishingConfiguration>();
         Subscription = configurationSection.GetSection(nameof(Subscription)).Get<SubscriptionConfiguration>();
         UseEmulator = configurationSection.GetValue<bool>(nameof(UseEmulator));
-        ResourceInitialization = configurationSection.GetValue<ResourceInitialization>(nameof(ResourceInitialization));
+        ResourceInitialization = configurationSection.GetValue(nameof(ResourceInitialization), ResourceInitialization.All);
         VerbosityMode = configurationSection.GetValue(nameof(VerbosityMode), false);
     }
 
-    public ChannelCredentials GetChannelCredentials()
+    internal ChannelCredentials GetChannelCredentials()
     {
         var credential = GetGoogleCredential();
 
         return credential.ToChannelCredentials();
     }
 
-    public async Task<string> GetProjectNumber()
+    internal EnvironmentId GetEnvironmentId(string topic, string subscription = null)
     {
-        var project = await GetProject();
+        var key = $"{topic}::{subscription}";
 
-        return project.ProjectName.ProjectId;
+        return _environmentCache.GetOrAdd(key, _ =>
+        {
+            var unmanaged = !string.IsNullOrWhiteSpace(subscription);
+            var channelCredentials = GetChannelCredentials();
+            var flowControl = Subscription?.GetFlowControlSettings();
+
+            var environentId = new EnvironmentId(
+                UseEmulator,
+                unmanaged,
+                VerbosityMode,
+                channelCredentials,
+                flowControl);
+
+            return environentId;
+        });
     }
 
-    public TopicId GetTopicId(string topicId)
+    internal TopicId GetTopicId(string topic, string subscription = null)
     {
-        ArgumentNullException.ThrowIfNull(Publishing, nameof(Publishing));
+        Guard.ThrowIfNullOrWhiteSpace(topic, nameof(topic));
 
-        if (!Publishing.HasTopic(topicId))
-            throw new ArgumentException($"The topic {topicId} is not configured in Publishing section");
+        return _topicCache.GetOrAdd(topic, t =>
+        {
+            var environmentId = GetEnvironmentId(topic, subscription);
 
-        return new TopicId(ProjectId, topicId, this);
+            if (environmentId.Unmanaged)
+                return new TopicId(ProjectId, t);
+
+            return new TopicId(ProjectId, t, Publishing);
+        });
     }
 
-    public SubscriptionId GetSubscriptionId(string topic, string subscription)
+    internal SubscriptionId GetSubscriptionId(string topic, string subscription = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(topic, nameof(topic));
+        Guard.ThrowIfNullOrWhiteSpace(topic, nameof(topic));
 
-        var topicId = GetTopicId(topic);
+        var key = $"{topic}::{subscription}";
 
-        return new SubscriptionId(ProjectId, topicId, this, subscription);
+        return _subscriptionCache.GetOrAdd(key, _ =>
+        {
+            var topicId = GetTopicId(topic, subscription);
+            var environentId = GetEnvironmentId(topic, subscription);
+
+            if (environentId.Unmanaged)
+                return new SubscriptionId(topicId, subscription);
+
+            return new SubscriptionId(topicId, Subscription);
+        });
     }
 
-    public bool ShouldInitializeTopics()
+    internal bool ShouldInitializeTopics()
     {
         if (ResourceInitialization == ResourceInitialization.All ||
             ResourceInitialization == ResourceInitialization.TopicsOnly)
@@ -85,7 +121,7 @@ public class PubSubConfiguration
         return false;
     }
 
-    public bool ShouldInitializeSubscriptions()
+    internal bool ShouldInitializeSubscriptions()
     {
         if (ResourceInitialization == ResourceInitialization.All ||
             ResourceInitialization == ResourceInitialization.SubscriptionsOnly)
@@ -94,35 +130,22 @@ public class PubSubConfiguration
         return false;
     }
 
-    public void Validate()
+    internal void Validate()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ProjectId, nameof(ProjectId));
+        Guard.ThrowIfNullOrWhiteSpace(ProjectId, nameof(ProjectId));
 
-        if (Publishing is not null)
+        if (ShouldInitializeTopics())
         {
-            if (ResourceInitialization != ResourceInitialization.None)
-            {
-                if (Publishing.MessageRetentionDurationDays < 7)
-                    throw new ArgumentException($"{nameof(Publishing.MessageRetentionDurationDays)} must be provided if {nameof(Publishing)} is configured and must be greater or equal than 7 days.");
-            }
-
-            if (Publishing.Topics is null || Publishing.Topics.Count == 0)
-                throw new ArgumentException($"{nameof(Publishing.Topics)} must be provided and non-empty if {nameof(Publishing)} is configured.");
+            ArgumentNullException.ThrowIfNull(Publishing, nameof(Publishing));
+            Publishing.Validate();
         }
 
-        if (Subscription is not null)
+        if (ShouldInitializeSubscriptions())
         {
-            if (string.IsNullOrWhiteSpace(Subscription.Sufix))
-                throw new ArgumentException($"{nameof(Subscription.Sufix)} must be provided if {nameof(Subscription)} is configured.");
-
-            if (ResourceInitialization != ResourceInitialization.None)
-            {
-                if (Publishing.MessageRetentionDurationDays < 7)
-                    throw new ArgumentException($"{nameof(Publishing.MessageRetentionDurationDays)} must be provided if {nameof(Publishing)} is configured and must be greater or equal than 7 days.");
-            }
+            ArgumentNullException.ThrowIfNull(Subscription, nameof(Subscription));
+            Subscription.Validate();
         }
     }
-
 
     private GoogleCredential GetGoogleCredential()
     {
@@ -137,23 +160,5 @@ public class PubSubConfiguration
             credential = GoogleCredential.FromJson(JsonCredentials);
 
         return credential;
-    }
-
-    private async Task<Project> GetProject()
-    {
-        if (_project != null) return _project;
-
-        var client = await ProjectsClient.CreateAsync();
-
-        var response = client.SearchProjects(new SearchProjectsRequest
-        {
-            Query = $"id:{ProjectId}"
-        });
-
-        var project = response.FirstOrDefault();
-
-        _project = project ?? throw new ArgumentException($"Project with id '{ProjectId}' not found.");
-
-        return _project;
     }
 }

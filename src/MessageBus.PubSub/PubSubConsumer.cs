@@ -1,9 +1,6 @@
-﻿using Google.Cloud.Iam.V1;
-using Google.Cloud.PubSub.V1;
-using Grpc.Core;
-using MessageBus.PubSub.Configuration;
-using MessageBus.PubSub.Serialization;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Google.Cloud.PubSub.V1;
+using MessageBus.PubSub.Internal;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace MessageBus.PubSub;
@@ -11,77 +8,74 @@ namespace MessageBus.PubSub;
 public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsumer>
     where TConsumer : class, IMessageConsumer<TEvent>
 {
-    private readonly ChannelCredentials _channelCredentials;
     private readonly SubscriptionId _subscriptionId;
-    private readonly bool _isDeadLetter;
+    private readonly EnvironmentId _environmentId;
+    private readonly bool _isDeadLetterConsumer;
+    private readonly IHostApplicationLifetime _lifetime;
 
     private SubscriberClient _subscriberClient;
 
     public PubSubConsumer(
-        ChannelCredentials channelCredentials,
         SubscriptionId subscriptionId,
-        bool isDeadLetter,
-        IServiceScopeFactory serviceScopeFactory,
-        IPubSubSerializer serializer,
-        ILogger<MessageConsumer<TEvent, TConsumer>> logger,
-        bool verbosityMode)
-        : base(serviceScopeFactory, serializer, logger, verbosityMode)
+        EnvironmentId environmentId,
+        bool isDeadLetterConsumer,
+        IServiceProvider serviceProvider,
+        IMessageSerializer messageSerializer,
+        IHostApplicationLifetime lifetime)
+        : base(serviceProvider, messageSerializer, environmentId.VerbosityMode)
     {
-        _channelCredentials = channelCredentials;
         _subscriptionId = subscriptionId;
-        _isDeadLetter = isDeadLetter;
-    }
+        _environmentId = environmentId;
+        _isDeadLetterConsumer = isDeadLetterConsumer;
+        _lifetime = lifetime;
 
+        var subscriptionName = isDeadLetterConsumer ?
+            _subscriptionId.DeadLetterSubscription.SubscriptionName :
+            _subscriptionId.Subscription.SubscriptionName;
+    }
     protected override async Task InitializeProcessing(CancellationToken stoppingToken)
     {
-        if (!_subscriptionId.PubSubConfiguration.ShouldInitializeSubscriptions())
+        if (_environmentId.Unmanaged)
+        {
+            _environmentId.Initialized();
             return;
-
-        var publisherBuilder = new PublisherServiceApiClientBuilder();
-        var subscriberBuilder = new SubscriberServiceApiClientBuilder();
-
-        if (_subscriptionId.PubSubConfiguration.UseEmulator)
-        {
-            publisherBuilder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
-            subscriberBuilder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
-        }
-        else
-        {
-            publisherBuilder.ChannelCredentials = _channelCredentials;
-            subscriberBuilder.ChannelCredentials = _channelCredentials;
         }
 
-        var publisherService = await publisherBuilder.BuildAsync(stoppingToken);
-        var subscriberService = await subscriberBuilder.BuildAsync(stoppingToken);
+        var deadLetterSubscription = _subscriptionId.DeadLetterSubscription;
 
-        await InitializeConsumerTopic(publisherService, stoppingToken);
+        if (_isDeadLetterConsumer)
+        {
+            await _environmentId.EnsureSubscriptionExists(
+                deadLetterSubscription.SubscriptionName,
+                Logger,
+                maxAttempts: 10,
+                delayInSeconds: 10,
+                _lifetime,
+                stoppingToken);
 
-        await InitializeConsumerDeadLetterTopic(publisherService, stoppingToken);
-
-        await InitializeConsumerDeadLetterSubscription(subscriberService, stoppingToken);
-
-        await InitializeConsumerSubscription(subscriberService, stoppingToken);
-
-        if (_isDeadLetter || _subscriptionId.PubSubConfiguration.UseEmulator)
             return;
+        }
 
-        await EnsurePublisherRoleBinding(publisherService, stoppingToken);
-        await EnsureSubscriberRoleBinding(subscriberService, stoppingToken);
+        var topic = _subscriptionId.TopicId.Topic;
+        var deadLetterTopic = _subscriptionId.DeadLetterTopic;
+        var subscription = _subscriptionId.Subscription;
+
+        await _environmentId.CreateTopic(topic, Logger, stoppingToken);
+        await _environmentId.CreateTopic(deadLetterTopic, Logger, stoppingToken);
+        await _environmentId.CreateSubscription(deadLetterSubscription, Logger, stoppingToken);
+        await _environmentId.CreateSubscription(subscription, Logger, stoppingToken);
+        await _environmentId.AddRoleBindings(_subscriptionId, Logger, stoppingToken);
+
+        _environmentId.Initialized();
     }
 
     protected override async Task StartProcessing(CancellationToken stoppingToken)
     {
-        var subscriberBuilder = new SubscriberClientBuilder()
-        {
-            SubscriptionName = _isDeadLetter ? _subscriptionId.DeadLetterSubscriptionName : _subscriptionId.SubscriptionName
-        };
+        var subscriptionName = _isDeadLetterConsumer
+            ? _subscriptionId.DeadLetterSubscription.SubscriptionName
+            : _subscriptionId.Subscription.SubscriptionName;
 
-        if (_subscriptionId.PubSubConfiguration.UseEmulator)
-            subscriberBuilder.EmulatorDetection = Google.Api.Gax.EmulatorDetection.EmulatorOnly;
-        else
-            subscriberBuilder.ChannelCredentials = _channelCredentials;
-
-        _subscriberClient = await subscriberBuilder.BuildAsync(stoppingToken);
+        _subscriberClient = _environmentId.GetSubscriberClient(subscriptionName);
 
         await _subscriberClient.StartAsync(ConsumerHandler);
     }
@@ -92,6 +86,7 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         {
             await _subscriberClient.StopAsync(stoppingToken);
             await _subscriberClient.DisposeAsync();
+            _subscriberClient = null;
         }
     }
 
@@ -119,167 +114,5 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
 
             return SubscriberClient.Reply.Nack;
         }
-    }
-
-    private async Task InitializeConsumerTopic(PublisherServiceApiClient publisherService, CancellationToken stoppingToken)
-    {
-        var topic = _subscriptionId.TopicId.GetTopic();
-
-        try
-        {
-            await publisherService.CreateTopicAsync(
-                topic,
-                stoppingToken);
-
-            Logger.LogInformation("Message=Topic {TopicName} was created; Subscription={Subscription}; ProjectId={ProjectId};",
-                topic.Name,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.AlreadyExists)
-        {
-            Logger.LogInformation("Message=Topic {TopicName} already exists; Subscription={Subscription}; ProjectId={ProjectId};",
-                topic.Name,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-    }
-
-    private async Task InitializeConsumerDeadLetterTopic(PublisherServiceApiClient publisherService, CancellationToken stoppingToken)
-    {
-        var topic = _subscriptionId.GetDeadLetterTopic();
-
-        try
-        {
-            await publisherService.CreateTopicAsync(
-                topic,
-                stoppingToken);
-
-            Logger.LogInformation("Message=Dead lettering topic {TopicName} was created; Subscription={Subscription}; ProjectId={ProjectId};",
-                topic.Name,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.AlreadyExists)
-        {
-            Logger.LogInformation("Message=Dead lettering topic {TopicName} already exists; Subscription={Subscription}; ProjectId={ProjectId};",
-                topic.Name,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-    }
-
-    private async Task InitializeConsumerDeadLetterSubscription(SubscriberServiceApiClient subscriberService, CancellationToken stoppingToken)
-    {
-        var deadLetterSubscription = _subscriptionId.GetDeadLetterSubscription();
-
-        try
-        {
-            await subscriberService.CreateSubscriptionAsync(deadLetterSubscription, stoppingToken);
-
-            Logger.LogInformation("Message=Dead letter subscription {TopicName} was created; Subscription={Subscription}; ProjectId={ProjectId};",
-                deadLetterSubscription.Topic,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.AlreadyExists)
-        {
-            Logger.LogInformation("Message=Dead letter subscription {TopicName} already exists; Subscription={Subscription}; ProjectId={ProjectId};",
-                deadLetterSubscription.Topic,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-    }
-
-    private async Task InitializeConsumerSubscription(SubscriberServiceApiClient subscriberService, CancellationToken stoppingToken)
-    {
-        var subscription = _subscriptionId.GetSubscription();
-
-        try
-        {
-            await subscriberService.CreateSubscriptionAsync(subscription, stoppingToken);
-
-            Logger.LogInformation("Message=Subscription {TopicName} was created; Subscription={Subscription}; ProjectId={ProjectId};",
-                subscription.Name,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.AlreadyExists)
-        {
-            Logger.LogInformation("Message=Subscription {TopicName} already exists; Subscription={Subscription}; ProjectId={ProjectId};",
-                subscription.Name,
-                _subscriptionId.SubscriptionName.SubscriptionId,
-                _subscriptionId.SubscriptionName.ProjectId);
-        }
-    }
-
-    private async Task EnsurePublisherRoleBinding(PublisherServiceApiClient publisherService, CancellationToken stoppingToken)
-    {
-        var topic = _subscriptionId.GetDeadLetterTopic();
-        var resource = topic.Name;
-
-        try
-        {
-            var serviceAccount = await _subscriptionId.GetServiceAccount();
-
-            var policy = await publisherService.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest { Resource = resource }, stoppingToken);
-
-            if (AppendRole(policy, "roles/pubsub.publisher", serviceAccount))
-            {
-                await publisherService.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest { Resource = resource, Policy = policy }, stoppingToken);
-
-                Logger.LogInformation("Message=Granted roles/pubsub.publisher on DLQ topic; Resource={Resource}; ServiceAccount={serviceAccount}", resource, serviceAccount);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Message=Failed to grant roles/pubsub.publisher on DLQ topic; Resource={Resource};", resource);
-            throw;
-        }
-    }
-
-    private async Task EnsureSubscriberRoleBinding(SubscriberServiceApiClient subscriberService, CancellationToken stoppingToken)
-    {
-        var resource = _subscriptionId.SubscriptionName.ToString();
-
-        try
-        {
-            var serviceAccount = await _subscriptionId.GetServiceAccount();
-
-            var policy = await subscriberService.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest { Resource = resource }, stoppingToken);
-
-            if (AppendRole(policy, "roles/pubsub.subscriber", serviceAccount))
-            {
-                await subscriberService.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest { Resource = resource, Policy = policy }, stoppingToken);
-
-                Logger.LogInformation("Message=Granted roles/pubsub.subscriber on subscription; Resource={Resource}; ServiceAccount={serviceAccount}", resource, serviceAccount);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Message=Failed to granted roles/pubsub.subscriber on subscription; Resource={Resource};", resource);
-        }
-    }
-
-    private static bool AppendRole(Policy policy, string role, string member)
-    {
-        var binding = policy.Bindings.FirstOrDefault(b => b.Role == role);
-        if (binding is null)
-        {
-            binding = new Binding
-            {
-                Role = role
-            };
-
-            policy.Bindings.Add(binding);
-        }
-
-        if (!binding.Members.Contains(member))
-        {
-            binding.Members.Add(member);
-            return true;
-        }
-
-        return false;
     }
 }

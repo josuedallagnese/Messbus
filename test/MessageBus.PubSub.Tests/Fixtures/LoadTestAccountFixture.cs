@@ -10,7 +10,7 @@ using Moq;
 
 namespace MessageBus.PubSub.Tests.Fixtures;
 
-public class SingleAccountFixture : AccountFixture
+public class LoadTestAccountFixture : AccountFixture
 {
     public IServiceProvider Provider { get; private set; }
     public EnvironmentId EnvironmentId { get; private set; }
@@ -20,7 +20,7 @@ public class SingleAccountFixture : AccountFixture
     public override async Task Initialize()
     {
         var services = new ServiceCollection()
-            .AddSingleton(new Mock<IHostApplicationLifetime>().Object);
+           .AddSingleton(new Mock<IHostApplicationLifetime>().Object);
 
         services.AddLogging(c =>
         {
@@ -29,22 +29,22 @@ public class SingleAccountFixture : AccountFixture
         });
 
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.SingleAccount.json", false)
+            .AddJsonFile("appsettings.LoadTest.json", false)
             .Build();
 
         var pubSubConfiguration = new PubSubConfiguration(configuration);
 
         services.AddPubSub(pubSubConfiguration)
-            .AddConsumer<FrameworkEvent, FrameworkEventConsumer_SingleAccount, FrameworkEventDeadLetterConsumer_SingleAccount>("framework");
+            .AddUnmanagedConsumer<LoadEvent, LoadEventConsumer>("load-test", "load-test.message-bus");
 
-        services.AddSingleton<ConsumerCollector<FrameworkEvent, FrameworkEventConsumer_SingleAccount>>();
+        services.AddSingleton<ConsumerCollector<LoadEvent, LoadEventConsumer>>();
 
         Provider = services.BuildServiceProvider();
-        Logger = Provider.GetRequiredService<ILogger<SingleAccountFixture>>();
+        Logger = Provider.GetRequiredService<ILogger<UnmanagedAccountFixture>>();
 
-        EnvironmentId = pubSubConfiguration.GetEnvironmentId("framework");
-        SubscriptionId = pubSubConfiguration.GetSubscriptionId("framework");
+        EnvironmentId = pubSubConfiguration.GetEnvironmentId("load-test", "load-test.message-bus");
+        SubscriptionId = pubSubConfiguration.GetSubscriptionId("load-test", "load-test.message-bus");
 
-        await Cleanup(EnvironmentId, SubscriptionId, Logger);
+        await InitializeUnmanaged(EnvironmentId, SubscriptionId, Logger);
     }
 }

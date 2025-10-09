@@ -5,38 +5,37 @@ namespace MessageBus;
 
 public abstract class MessageBus : IMessageBus
 {
-    protected IServiceScopeFactory ServiceScopeFactory;
+    protected IServiceProvider ServiceProvider;
     protected IMessageSerializer Serializer;
     protected ILogger Logger;
-    protected bool VerbosityMode;
 
     protected MessageBus(
-        IServiceScopeFactory serviceScopeFactory,
-        IMessageSerializer serializer,
-        ILogger<MessageBus> logger,
-        bool verbosityMode)
+        IServiceProvider serviceProvider,
+        IMessageSerializer serializer)
     {
-        ServiceScopeFactory = serviceScopeFactory;
+        ServiceProvider = serviceProvider;
         Serializer = serializer;
-        Logger = logger;
-        VerbosityMode = verbosityMode;
+        Logger = serviceProvider.GetRequiredService<ILogger<MessageBus>>();
     }
 
     public async Task<string> Publish<T>(string topic, T message, CancellationToken cancellationToken = default)
+        where T : class
     {
-        using var scope = ServiceScopeFactory.CreateScope();
+        var messageIds = await PublishBatch(topic, new[] { message }, cancellationToken);
 
-        if (VerbosityMode)
-            Logger.LogInformation("Sending message to topic. Message={@Message}; Topic={Topic};", topic, message);
-
-        var data = Serializer.Serialize(message);
-
-        var messageId = await Send(topic, data, cancellationToken);
-
-        Logger.LogInformation("Message sent successfully. MessageId={MessageId}; Topic={Topic}; DataLength={DataLength}", messageId, topic, data.Length);
-
-        return messageId;
+        return messageIds.FirstOrDefault();
     }
 
-    protected abstract Task<string> Send(string topic, byte[] message, CancellationToken cancellationToken = default);
+    public async Task<IEnumerable<string>> PublishBatch<T>(string topic, IEnumerable<T> messages, CancellationToken cancellationToken = default)
+        where T : class
+    {
+        using var scope = ServiceProvider.CreateScope();
+
+        var data = messages.Select(s => Serializer.Serialize(s)).ToArray();
+        var total = data.Length;
+
+        return await Send(topic, data, cancellationToken);
+    }
+
+    protected abstract Task<IEnumerable<string>> Send(string topic, IEnumerable<byte[]> messages, CancellationToken cancellationToken = default);
 }

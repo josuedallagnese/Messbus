@@ -1,5 +1,3 @@
-version: '3.9'
-
 networks:
   messagebus_network:
     name: messagebus_network

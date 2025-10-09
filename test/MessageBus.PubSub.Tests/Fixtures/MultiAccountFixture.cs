@@ -1,56 +1,64 @@
-﻿using MessageBus.PubSub.Tests.Consumers;
+﻿using MessageBus.PubSub.Configuration;
+using MessageBus.PubSub.Internal;
+using MessageBus.PubSub.Tests.Consumers;
 using MessageBus.PubSub.Tests.Events;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace MessageBus.PubSub.Tests.Fixtures;
 
-public class MultiAccountFixture : IDisposable
+public class MultiAccountFixture : AccountFixture
 {
-    public IHost Host { get; }
+    public IServiceProvider Provider { get; private set; }
 
-    public MultiAccountFixture()
+    public EnvironmentId EnvironmentIdAccount1 { get; private set; }
+    public SubscriptionId SubscriptionIdAccount1 { get; private set; }
+    public EnvironmentId EnvironmentIdAccount2 { get; private set; }
+    public SubscriptionId SubscriptionIdAccount2 { get; private set; }
+    public ILogger Logger { get; private set; }
+
+    public override async Task Initialize()
     {
+        var services = new ServiceCollection()
+            .AddSingleton(new Mock<IHostApplicationLifetime>().Object);
+
+        services.AddLogging(c =>
+        {
+            c.ClearProviders();
+            c.AddConsole();
+        });
+
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.MultiAccount.json", false)
             .Build();
 
-        Host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
-            .ConfigureHostConfiguration(builder =>
-            {
-                builder.AddConfiguration(configuration);
-            })
-            .ConfigureServices((context, services) =>
-            {
-                services.AddPubSub(configuration, "Account1")
-                    .AddConsumer<FrameworkEvent, FrameworkEventConsumer_MultiAccount1, FrameworkEventDeadLetterConsumer_MultiAccount1>("framework");
+        var pubSubConfigurationAccount1 = new PubSubConfiguration("Account1", configuration);
 
-                services.AddSingleton<ConsumerCollector<FrameworkEvent, FrameworkEventConsumer_MultiAccount1>>();
+        services.AddPubSub(pubSubConfigurationAccount1)
+            .AddConsumer<FrameworkEvent, FrameworkEventConsumer_MultiAccount1, FrameworkEventDeadLetterConsumer_MultiAccount1>("framework");
 
-                services.AddPubSub(configuration, "Account2")
-                    .AddConsumer<FrameworkEvent, FrameworkEventConsumer_MultiAccount2, FrameworkEventDeadLetterConsumer_MultiAccount2>("framework");
+        services.AddSingleton<ConsumerCollector<FrameworkEvent, FrameworkEventConsumer_MultiAccount1>>();
 
-                services.AddSingleton<ConsumerCollector<FrameworkEvent, FrameworkEventConsumer_MultiAccount2>>();
-            }).Build();
+        var pubSubConfigurationAccount2 = new PubSubConfiguration("Account2", configuration);
 
-        Host.Start();
-    }
+        services.AddPubSub(pubSubConfigurationAccount2)
+            .AddConsumer<FrameworkEvent, FrameworkEventConsumer_MultiAccount2, FrameworkEventDeadLetterConsumer_MultiAccount2>("framework");
 
-    public IMessageBus GetPublisher(string alias)
-    {
-        return Host.Services.GetRequiredKeyedService<IMessageBus>(alias);
-    }
+        services.AddSingleton<ConsumerCollector<FrameworkEvent, FrameworkEventConsumer_MultiAccount2>>();
 
-    public ConsumerCollector<TEvent, TConsumer> GetConsumerCollector<TEvent, TConsumer>()
-        where TConsumer : IMessageConsumer<TEvent>
-    {
-        return Host.Services.GetRequiredService<ConsumerCollector<TEvent, TConsumer>>();
-    }
+        Provider = services.BuildServiceProvider();
+        Logger = Provider.GetRequiredService<ILogger<MultiAccountFixture>>();
 
-    public void Dispose()
-    {
-        Host.StopAsync().GetAwaiter().GetResult();
-        Host.Dispose();
+        EnvironmentIdAccount1 = pubSubConfigurationAccount1.GetEnvironmentId("framework");
+        SubscriptionIdAccount1 = pubSubConfigurationAccount1.GetSubscriptionId("framework");
+
+        EnvironmentIdAccount2 = pubSubConfigurationAccount2.GetEnvironmentId("framework");
+        SubscriptionIdAccount2 = pubSubConfigurationAccount2.GetSubscriptionId("framework");
+
+        await Cleanup(EnvironmentIdAccount1, SubscriptionIdAccount1, Logger);
+        await Cleanup(EnvironmentIdAccount2, SubscriptionIdAccount2, Logger);
     }
 }

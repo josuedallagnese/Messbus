@@ -15,6 +15,6 @@ public class FrameworkEventConsumer_SingleAccount : IMessageConsumer<FrameworkEv
     {
         _consumerCollector.AddAttempt();
 
-        await _consumerCollector.Successful();
+        await _consumerCollector.Successful(message.Message);
     }
 }

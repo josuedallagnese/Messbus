@@ -4,13 +4,13 @@ using MessageBus.PubSub.Serialization;
 
 namespace MessageBus.PubSub.Tests;
 
-public class PubSubSerializerTests
+public class JsonMessageSerializerTests
 {
     [Fact]
     public void SerializeAndDeserialize_ShouldReturnSameObject()
     {
         // Arrange
-        var serializer = new PubSubSerializer();
+        var serializer = new JsonMessageSerializer();
 
         var originalMessage = new { Id = 1, Name = "Test" };
 
@@ -28,7 +28,7 @@ public class PubSubSerializerTests
     public void SerializeAndDeserialize_ShouldReturnSameOriginalMessage()
     {
         // Arrange
-        var serializer = new PubSubSerializer();
+        var serializer = new JsonMessageSerializer();
         var originalMessage = new OriginalMessage { Id = 1, Name = "Test" };
 
         // Act
@@ -44,7 +44,8 @@ public class PubSubSerializerTests
     public void SerializeAndDeserialize_ShouldHandleSpecialTypes()
     {
         // Arrange
-        var serializer = new PubSubSerializer();
+        var serializer = new JsonMessageSerializer();
+
         var now = DateTime.UtcNow;
         var guid = Guid.NewGuid();
 
@@ -71,7 +72,8 @@ public class PubSubSerializerTests
     public void SerializeAndDeserialize_ShouldHandleSpecialCharacters()
     {
         // Arrange
-        var serializer = new PubSubSerializer();
+        var serializer = new JsonMessageSerializer();
+
         var specialText = "Olá, mundo! Çãõüß€ 漢字 😀";
         var message = new SpecialCharactersMessage
         {
