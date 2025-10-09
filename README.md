@@ -15,8 +15,7 @@ A lightweight, extensible message bus framework for .NET that provides a simple 
 - [Google Cloud Pub/Sub Integration](#google-cloud-pubsub-integration)
 - [Configuration](#configuration)
 - [Advanced Usage](#advanced-usage)
-- [Custom Serialization](#custom-serialization)
-- [Testing](#testing)
+- [Architecture](#architecture)
 - [Contributing](#contributing)
 - [License](#license)
 
