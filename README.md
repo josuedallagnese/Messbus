@@ -375,10 +375,12 @@ builder.Services.AddPubSub(builder.Configuration);
 
 #### ResourceInitialization Options
 
-- `All` - Create topics and subscriptions automatically
-- `TopicsOnly` - Only create topics
-- `SubscriptionsOnly` - Only create subscriptions
-- `None` - Don't create any resources (unmanaged mode)
+| Option | Description | Required GCP Permission |
+|--------|-------------|------------------------|
+| `All` | Create topics and subscriptions automatically | **Pub/Sub Admin** |
+| `TopicsOnly` | Only create topics | **Pub/Sub Publisher** |
+| `SubscriptionsOnly` | Only create subscriptions | **Pub/Sub Subscriber** |
+| `None` | Don't create any resources (unmanaged mode) | Depends on usage (Publisher/Subscriber) |
 
 #### PublishingConfiguration
 
