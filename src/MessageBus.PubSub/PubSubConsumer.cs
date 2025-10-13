@@ -28,11 +28,8 @@ public class PubSubConsumer<TEvent, TConsumer> : MessageConsumer<TEvent, TConsum
         _environmentId = environmentId;
         _isDeadLetterConsumer = isDeadLetterConsumer;
         _lifetime = lifetime;
-
-        var subscriptionName = isDeadLetterConsumer ?
-            _subscriptionId.DeadLetterSubscription.SubscriptionName :
-            _subscriptionId.Subscription.SubscriptionName;
     }
+
     protected override async Task InitializeProcessing(CancellationToken stoppingToken)
     {
         if (_environmentId.Unmanaged)

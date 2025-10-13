@@ -17,7 +17,7 @@ public class SubscriptionId
     {
         TopicId = topicId ?? throw new ArgumentNullException(nameof(topicId));
 
-        var subscriptionName = GetUnmanagedSubscriptionName(topicId, subscription);
+        var subscriptionName = SubscriptionId.GetUnmanagedSubscriptionName(topicId, subscription);
         Subscription = GetUnmanagedSubscription(topicId, subscriptionName);
     }
 
@@ -28,7 +28,7 @@ public class SubscriptionId
 
         config.Validate();
 
-        var subscriptionName = GetSubscriptionName(topicId, config);
+        var subscriptionName = SubscriptionId.GetSubscriptionName(topicId, config);
         DeadLetterTopic = GetDeadLetterTopic(config, subscriptionName);
         DeadLetterSubscription = GetDeadLetterSubscription(DeadLetterTopic, config, subscriptionName);
         Subscription = GetSubscription(topicId, config, subscriptionName, DeadLetterTopic);
@@ -113,12 +113,12 @@ public class SubscriptionId
         return subscription;
     }
 
-    private SubscriptionName GetSubscriptionName(TopicId topicId, SubscriptionConfiguration config)
+    private static SubscriptionName GetSubscriptionName(TopicId topicId, SubscriptionConfiguration config)
     {
         return new SubscriptionName(topicId.TopicName.ProjectId, $"{topicId.TopicName.TopicId}.{config.Sufix}");
     }
 
-    private SubscriptionName GetUnmanagedSubscriptionName(TopicId topicId, string subscription)
+    private static SubscriptionName GetUnmanagedSubscriptionName(TopicId topicId, string subscription)
     {
         return new SubscriptionName(topicId.TopicName.ProjectId, subscription);
     }
