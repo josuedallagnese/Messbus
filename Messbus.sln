@@ -1,0 +1,51 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35527.113
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{4E391260-4341-4545-BF10-5A267A89F85D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{F9B52995-B36B-4728-B979-4FE58884D772}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messbus.PubSub", "src\Messbus.PubSub\Messbus.PubSub.csproj", "{5E3690EA-AD67-1D3E-6541-F2B2C4A53340}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messbus.PubSub.Tests", "test\Messbus.PubSub.Tests\Messbus.PubSub.Tests.csproj", "{1A440423-D406-69F8-D005-7A7C0CD01BC0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messbus", "src\Messbus\Messbus.csproj", "{798ACC30-C44E-C39F-323D-1745F0F95F2C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5E3690EA-AD67-1D3E-6541-F2B2C4A53340}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E3690EA-AD67-1D3E-6541-F2B2C4A53340}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E3690EA-AD67-1D3E-6541-F2B2C4A53340}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E3690EA-AD67-1D3E-6541-F2B2C4A53340}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A440423-D406-69F8-D005-7A7C0CD01BC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A440423-D406-69F8-D005-7A7C0CD01BC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A440423-D406-69F8-D005-7A7C0CD01BC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A440423-D406-69F8-D005-7A7C0CD01BC0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{798ACC30-C44E-C39F-323D-1745F0F95F2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{798ACC30-C44E-C39F-323D-1745F0F95F2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{798ACC30-C44E-C39F-323D-1745F0F95F2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{798ACC30-C44E-C39F-323D-1745F0F95F2C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5E3690EA-AD67-1D3E-6541-F2B2C4A53340} = {4E391260-4341-4545-BF10-5A267A89F85D}
+		{1A440423-D406-69F8-D005-7A7C0CD01BC0} = {F9B52995-B36B-4728-B979-4FE58884D772}
+		{798ACC30-C44E-C39F-323D-1745F0F95F2C} = {4E391260-4341-4545-BF10-5A267A89F85D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2806CCB3-B881-45D6-B324-95344D255772}
+	EndGlobalSection
+EndGlobal

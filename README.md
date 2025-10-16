@@ -1,4 +1,4 @@
-# MessageBus
+# Messbus
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-6.0%20%7C%208.0-512BD4)](https://dotnet.microsoft.com/)
@@ -21,7 +21,7 @@ A lightweight, extensible message bus framework for .NET that provides a simple 
 
 ## 🎯 Overview
 
-MessageBus is a flexible messaging framework designed to simplify the implementation of publish-subscribe patterns in .NET applications. It provides a clean abstraction layer that allows you to switch between different messaging platforms without changing your application code.
+Messbus is a flexible messaging framework designed to simplify the implementation of publish-subscribe patterns in .NET applications. It provides a clean abstraction layer that allows you to switch between different messaging platforms without changing your application code.
 
 Currently supported platforms:
 - **Google Cloud Pub/Sub** - Full-featured implementation with managed and unmanaged modes
@@ -46,13 +46,13 @@ Currently supported platforms:
 Install the core package:
 
 ```bash
-dotnet add package MessageBus
+dotnet add package Messbus
 ```
 
 Install the Google Cloud Pub/Sub implementation:
 
 ```bash
-dotnet add package MessageBus.PubSub
+dotnet add package Messbus.PubSub
 ```
 
 ## 🚀 Getting Started
@@ -60,8 +60,8 @@ dotnet add package MessageBus.PubSub
 ### Basic Publisher
 
 ```csharp
-using MessageBus;
-using MessageBus.PubSub;
+using Messbus;
+using Messbus.PubSub;
 
 // Define your message
 public class OrderCreatedEvent
@@ -96,7 +96,7 @@ app.MapPost("/orders", async (IMessageBus messageBus) =>
         CreatedAt = DateTime.UtcNow
     };
 
-    var messageId = await messageBus.Publish("orders", orderEvent);
+    var messageId = await Messbus.Publish("orders", orderEvent);
     return Results.Ok(new { MessageId = messageId });
 });
 
@@ -106,8 +106,8 @@ app.Run();
 ### Basic Consumer
 
 ```csharp
-using MessageBus;
-using MessageBus.PubSub;
+using Messbus;
+using Messbus.PubSub;
 
 // Define your message handler
 public class OrderCreatedEventConsumer : IMessageConsumer<OrderCreatedEvent>
@@ -293,7 +293,7 @@ var orders = new List<OrderCreatedEvent>
     new() { OrderId = "3", Amount = 30.00m }
 };
 
-var messageIds = await messageBus.PublishBatch("orders", orders);
+var messageIds = await Messbus.PublishBatch("orders", orders);
 ```
 
 ### Multiple Pub/Sub Instances
@@ -327,7 +327,7 @@ var secondaryBus = serviceProvider.GetRequiredKeyedService<IMessageBus>("seconda
 
 ```json
 {
-  "MessageBus": {
+  "Messbus": {
     "PubSub": {
       "ProjectId": "my-gcp-project",
       "JsonCredentials": "{...}",
@@ -504,15 +504,15 @@ builder.Services.AddPubSub(config =>
 ### Core Components
 
 ```
-MessageBus (Core)
+Messbus (Core)
 ├── IMessageBus              - Publishing interface
 ├── IMessageConsumer<T>      - Consumer interface
 ├── IMessageSerializer       - Serialization interface
-├── MessageBus               - Abstract base class for publishers
+├── Messbus                  - Abstract base class for publishers
 ├── MessageConsumer<T>       - Abstract base class for consumers
 └── MessageContext<T>        - Message context wrapper
 
-MessageBus.PubSub (Implementation)
+Messbus.PubSub (Implementation)
 ├── PubSubMessageBus         - Google Cloud Pub/Sub publisher
 ├── PubSubConsumer<T>        - Google Cloud Pub/Sub consumer
 ├── Configuration/           - Configuration classes
@@ -527,11 +527,6 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ### Development Setup
 
 1. Clone the repository
-```bash
-git clone https://github.com/yourusername/MessageBus.git
-cd MessageBus
-```
-
 2. Restore dependencies
 ```bash
 dotnet restore
@@ -561,7 +556,7 @@ This project is licensed under the MIT License - see below for details:
 ```
 MIT License
 
-Copyright (c) 2024 MessageBus Contributors
+Copyright (c) 2025 Messbus Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
