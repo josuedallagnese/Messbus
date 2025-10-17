@@ -16,10 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - name: Download a Build Artifact
+        uses: actions/download-artifact@v5.0.0
         with:
-          name: nuget-packages
           run-id: ${{ inputs.build_run_id }}
 
       - name: Setup .NET
