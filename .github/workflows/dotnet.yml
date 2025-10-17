@@ -29,8 +29,7 @@ jobs:
       - name: Pack NuGet
         run: dotnet pack --configuration Release --no-build -o ./artifacts
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
         with:
-          name: nuget-packages
-          path: ./artifacts/*.nupkg
+            path: ./artifacts
