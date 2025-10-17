@@ -20,8 +20,8 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Pack NuGet
-        run: dotnet pack --configuration Release
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
 
       - name: Publish to NuGet.org
         run: dotnet nuget push "*.nupkg" \
