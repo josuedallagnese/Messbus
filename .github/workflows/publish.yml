@@ -1,0 +1,35 @@
+name: Publish NuGet Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Run ID do build que gerou os pacotes (.nupkg)'
+        required: true
+      destination:
+        description: 'Destino da publicação (nuget)'
+        required: true
+        default: 'nuget'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts from specific build
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          run-id: ${{ inputs.build_run_id }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish to NuGet.org
+        if: inputs.destination == 'nuget'
+        run: dotnet nuget push "*.nupkg" \
+              --api-key ${{ secrets.NUGET_API_KEY }} \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
