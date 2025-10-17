@@ -45,15 +45,29 @@ Currently supported platforms:
 
 Install the core package:
 
+[![NuGet](https://img.shields.io/nuget/v/Messbus.svg)](https://www.nuget.org/packages/Messbus)
+
 ```bash
 dotnet add package Messbus
 ```
 
 Install the Google Cloud Pub/Sub implementation:
 
+[![NuGet](https://img.shields.io/nuget/v/Messbus.PubSub.svg)](https://www.nuget.org/packages/Messbus.PubSub)
+
 ```bash
 dotnet add package Messbus.PubSub
 ```
+
+**NuGet Package:** [https://www.nuget.org/packages/Messbus](https://www.nuget.org/packages/Messbus)
+
+Install the Google Cloud Pub/Sub implementation:
+
+```bash
+dotnet add package Messbus.PubSub
+```
+
+**NuGet Package:** [https://www.nuget.org/packages/Messbus.PubSub](https://www.nuget.org/packages/Messbus.PubSub)
 
 ## 🚀 Getting Started
 
